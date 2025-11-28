@@ -5,7 +5,16 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, date, timedelta
 
 from sqlalchemy import (
-    create_engine, Column, Integer, String, DateTime, Boolean, func, ForeignKey, text
+    create_engine,
+    Column,
+    Integer,
+    String,
+    DateTime,
+    Boolean,
+    func,
+    ForeignKey,
+    text,
+    or_
 )
 from sqlalchemy.orm import sessionmaker, declarative_base
 
@@ -14,6 +23,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 # ===============================
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Heroku-style old prefix fix
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -26,7 +36,7 @@ else:
         future=True
     )
 
-# NOTE: removed deprecated `autocommit` arg; use `future=True` and explicit commits.
+# sessionmaker: совместимо с SQLAlchemy 1.4/2.x
 SessionLocal = sessionmaker(bind=engine, autoflush=False, future=True, expire_on_commit=False)
 Base = declarative_base()
 
@@ -45,16 +55,14 @@ class User(Base):
 class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True, index=True)
-    # связка на users.id — полезно для целостности
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(512))
     category = Column(String(128))
-    # храню строкой (как у вас было) — парсинг даты делает helper
     deadline = Column(String(64))
     tags = Column(String(256))
-    # Для совместимости с SQLite/PG: используем server_default как текст и python default
     completed = Column(Boolean, nullable=False, server_default=text('0'), default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 
 # ===============================
 # INIT
@@ -70,7 +78,7 @@ def get_session():
 # ===============================
 # INTERNAL HELPERS
 # ===============================
-def _task_to_dict(r: Task) -> Dict[str, Any]:
+def _task_to_dict(r: Task) -> Optional[Dict[str, Any]]:
     if r is None:
         return None
     return {
@@ -282,6 +290,39 @@ def delete_task(task_id: int) -> bool:
         session.delete(task)
         session.commit()
         return True
+    finally:
+        session.close()
+
+
+# ===============================
+# SEARCH (добавлено)
+# ===============================
+def search_tasks(query: str, user_internal_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    Поиск задач по запросу 'query' в полях title, tags и category.
+    Если передан user_internal_id, ищем только среди задач этого пользователя.
+    Возвращает список словарей (через _task_to_dict).
+    """
+    if not query:
+        return []
+
+    q_norm = query.strip().lower()
+    like_expr = f"%{q_norm}%"
+    session = get_session()
+    try:
+        rows_query = session.query(Task)
+        if user_internal_id is not None:
+            rows_query = rows_query.filter(Task.user_id == user_internal_id)
+
+        rows = rows_query.filter(
+            or_(
+                func.lower(Task.title).like(like_expr),
+                func.lower(Task.tags).like(like_expr),
+                func.lower(Task.category).like(like_expr),
+            )
+        ).order_by(Task.created_at.desc()).all()
+
+        return [_task_to_dict(r) for r in rows]
     finally:
         session.close()
 
