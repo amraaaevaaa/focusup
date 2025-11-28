@@ -8,5 +8,7 @@ flask-cors>=4.0
 
 python-telegram-bot>=20.0
 gunicorn
-# trigger deploy
+SQLAlchemy
+psycopg2-binary
+
 
