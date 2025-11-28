@@ -1,6 +1,9 @@
 # database.py
 import os
+import re
 from typing import Optional, Dict, Any, List
+from datetime import datetime, date
+
 from sqlalchemy import (
     create_engine, Column, Integer, String, DateTime, Boolean, func
 )
@@ -44,9 +47,8 @@ class Task(Base):
     user_id = Column(Integer, nullable=False)
     title = Column(String(512))
     category = Column(String(128))
-    deadline = Column(String(64))
+    deadline = Column(String(64))  # stored as string in legacy project
     tags = Column(String(256))
-    # use "false" for postgres; sqlite will accept it too
     completed = Column(Boolean, server_default="false", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -60,6 +62,50 @@ def init_db() -> None:
 
 def get_session():
     return SessionLocal()
+
+
+# ===============================
+# HELPERS (internal)
+# ===============================
+def _task_to_dict(r: Task) -> Dict[str, Any]:
+    return {
+        "id": r.id,
+        "user_id": r.user_id,
+        "title": r.title,
+        "category": r.category,
+        "deadline": r.deadline,
+        "tags": r.tags,
+        "completed": bool(r.completed),
+        "created_at": r.created_at
+    }
+
+def _extract_date_from_deadline(deadline_str: Optional[str]) -> Optional[date]:
+    """
+    Попытка извлечь дату из строки deadline.
+    Поддерживает форматы вида:
+      - "DD.MM.YY HH:MM"
+      - "DD.MM.YYYY HH:MM"
+      - "DD.MM.YY"
+      - "DD.MM.YYYY"
+    Возвращает datetime.date или None.
+    """
+    if not deadline_str:
+        return None
+
+    # ищем шаблон dd.mm.yy или dd.mm.yyyy
+    m = re.search(r'(\b\d{1,2}\.\d{1,2}\.\d{2,4}\b)', deadline_str)
+    if not m:
+        return None
+    date_part = m.group(1)
+
+    # Попробуем несколько форматов
+    for fmt in ("%d.%m.%Y", "%d.%m.%y"):
+        try:
+            dt = datetime.strptime(date_part, fmt)
+            return dt.date()
+        except Exception:
+            continue
+    return None
 
 
 # ===============================
@@ -106,23 +152,7 @@ def add_task(user_id: int, title: str, category: str = "Общие",
         session.close()
 
 
-def _task_to_dict(r: Task) -> Dict[str, Any]:
-    return {
-        "id": r.id,
-        "user_id": r.user_id,
-        "title": r.title,
-        "category": r.category,
-        "deadline": r.deadline,
-        "tags": r.tags,
-        "completed": bool(r.completed),
-        "created_at": r.created_at
-    }
-
-
 def get_task_by_id(task_id: int) -> Optional[Dict[str, Any]]:
-    """
-    Возвращает задачу как dict или None.
-    """
     session = get_session()
     try:
         task = session.get(Task, task_id)
@@ -160,14 +190,33 @@ def get_completed_tasks(user_internal_id: int) -> List[Dict[str, Any]]:
         session.close()
 
 
+def get_today_tasks(user_internal_id: int) -> List[Dict[str, Any]]:
+    """
+    Возвращает задачи, у которых дедлайн совпадает с сегодняшней датой.
+    Сравнение делается по дате, извлечённой из поля deadline (строка).
+    """
+    today = datetime.utcnow().date()  # используем UTC; если нужен другой TZ — скажи
+    session = get_session()
+    try:
+        rows = session.query(Task).filter_by(user_id=user_internal_id).all()
+        result = []
+        for r in rows:
+            d = _extract_date_from_deadline(r.deadline)
+            if d and d == today:
+                result.append(_task_to_dict(r))
+        # сортируем по created_at desc
+        result.sort(key=lambda x: x.get("created_at") or datetime.min, reverse=True)
+        return result
+    finally:
+        session.close()
+
+
 def update_task(task_id: int, **fields) -> bool:
-    """
-    Обновляет произвольные поля: title, category, deadline, tags, completed.
-    """
     allowed = {"title", "category", "deadline", "tags", "completed"}
     data = {k: v for k, v in fields.items() if k in allowed}
     if not data:
         return False
+
     session = get_session()
     try:
         task = session.get(Task, task_id)
