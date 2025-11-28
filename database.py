@@ -4,21 +4,18 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Получаем DATABASE_URL из окружения; если его нет — используем sqlite файл
+# Получаем DATABASE_URL из окружения; если его нет — используем sqlite
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
-    # Render иногда даёт postgres:// — SQLAlchemy требует postgresql://
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
     engine = create_engine(
         DATABASE_URL,
         future=True,
         pool_pre_ping=True
     )
 else:
-    # локальная SQLite для разработки
     engine = create_engine(
         "sqlite:///focusup.db",
         connect_args={"check_same_thread": False},
@@ -56,7 +53,7 @@ class Task(Base):
 
 
 # ================================
-# DB INIT
+# INIT
 # ================================
 def init_db():
     Base.metadata.create_all(bind=engine)
@@ -67,7 +64,7 @@ def get_session():
 
 
 # ================================
-# USER HELPERS
+# USER FUNCTIONS
 # ================================
 def add_user(tg_id, username=None, first_name=None, last_name=None):
     session = get_session()
@@ -100,7 +97,7 @@ def get_user_id(tg_id):
 
 
 # ================================
-# TASK HELPERS
+# TASK FUNCTIONS
 # ================================
 def add_task(user_id, title, category="Общие", deadline=None, tags=None):
     session = get_session()
@@ -176,4 +173,20 @@ def update_task_status(task_id: int, completed: bool = True) -> bool:
         return True
     finally:
         session.close()
-# Я РЕВУ
+
+
+# ================================
+# DELETE TASK
+# ================================
+def delete_task(task_id: int) -> bool:
+    session = get_session()
+    try:
+        task = session.get(Task, task_id)
+        if not task:
+            return False
+
+        session.delete(task)
+        session.commit()
+        return True
+    finally:
+        session.close()
