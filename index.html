@@ -1,0 +1,2334 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusUp - Тайм-менеджер</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FFFFFF;
+      color: #1A1A1A;
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    .app-container {
+      max-width: 400px;
+      margin: 0 auto;
+      min-height: 100%;
+      background: #FFFFFF;
+      position: relative;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      height: 4px;
+      background: #f0f0f0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #FF8A00, #3CC56B);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* Header */
+    .header {
+      padding: 20px 20px 10px;
+      background: #FFFFFF;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .welcome-text {
+      flex: 1;
+    }
+
+    .welcome-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1A1A1A;
+      margin: 0 0 4px 0;
+    }
+
+    .welcome-subtitle {
+      font-size: 14px;
+      color: #666;
+      margin: 0;
+    }
+
+    .owl-icon {
+      width: 48px;
+      height: 48px;
+      margin-left: 12px;
+    }
+
+    /* Navigation */
+    .nav-tabs {
+      display: flex;
+      padding: 0 20px;
+      background: #FFFFFF;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .nav-tab {
+      flex: 1;
+      padding: 12px 8px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .nav-tab.active {
+      color: #FF8A00;
+      border-bottom-color: #FF8A00;
+    }
+
+    /* Task List */
+    .task-list {
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    .task-item {
+      background: #FFFFFF;
+      border: 1px solid #f0f0f0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .task-item:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .task-item.completed {
+      opacity: 0.6;
+      background: #f8f9fa;
+    }
+
+    .task-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .task-checkbox {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      margin-top: 2px;
+      font-size: 14px;
+    }
+
+    .task-checkbox.checked {
+      background: #3CC56B;
+      border-color: #3CC56B;
+      color: white;
+    }
+
+    .task-content {
+      flex: 1;
+    }
+
+    .task-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: #1A1A1A;
+      margin: 0 0 4px 0;
+      line-height: 1.4;
+    }
+
+    .task-title.completed {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .task-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+
+    .task-category {
+      background: #FF8A00;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .task-priority {
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .task-priority.high {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .task-priority.medium {
+      background: #fff3e0;
+      color: #ef6c00;
+    }
+
+    .task-priority.low {
+      background: #e8f5e8;
+      color: #2e7d32;
+    }
+
+    .task-time {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .task-delete {
+      margin-left: auto;
+      font-size: 16px;
+      cursor: pointer;
+      color: #c62828;
+    }
+
+    /* Add Task Button */
+    .add-task-btn {
+      width: 100%;
+      background: #FF8A00;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 16px 20px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(255, 138, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .add-task-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 138, 0, 0.4);
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal.show {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: white;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 20px 20px 0 0;
+      padding: 24px;
+      transform: translateY(100%);
+      animation: slideUp 0.3s ease forwards;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1A1A1A;
+      margin: 0;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #666;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #f0f0f0;
+      border-radius: 12px;
+      font-size: 16px;
+      color: #1A1A1A;
+      background: #FFFFFF;
+      transition: border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #FF8A00;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .category-btn {
+      padding: 12px;
+      border: 2px solid #f0f0f0;
+      border-radius: 12px;
+      background: white;
+      color: #666;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .category-btn.selected {
+      border-color: #FF8A00;
+      background: #FF8A00;
+      color: white;
+    }
+
+    .priority-grid {
+      display: flex;
+      gap: 8px;
+    }
+
+    .priority-btn {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #f0f0f0;
+      border-radius: 12px;
+      background: white;
+      color: #666;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .priority-btn.selected {
+      border-color: #FF8A00;
+      background: #FF8A00;
+      color: white;
+    }
+
+    .save-btn {
+      width: 100%;
+      padding: 16px;
+      background: #3CC56B;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .save-btn:hover {
+      background: #2ea358;
+    }
+
+    .save-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    /* Voice Input */
+    .input-with-voice {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .voice-input {
+      flex: 1;
+      padding-right: 50px;
+    }
+
+    .voice-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: #3CC56B;
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .voice-btn:hover {
+      background: #2ea358;
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .voice-btn.recording {
+      background: #ff4444;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: translateY(-50%) scale(1);
+      }
+
+      50% {
+        transform: translateY(-50%) scale(1.1);
+      }
+
+      100% {
+        transform: translateY(-50%) scale(1);
+      }
+    }
+
+    /* Screen Navigation */
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 400px;
+      background: white;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      padding: 8px 0;
+      z-index: 100;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      background: none;
+      color: #666;
+    }
+
+    .nav-item.active {
+      color: #FF8A00;
+    }
+
+    .nav-icon {
+      width: 24px;
+      height: 24px;
+      margin-bottom: 4px;
+    }
+
+    .nav-label {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* Calendar Screen */
+    .calendar-container {
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .calendar-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1A1A1A;
+    }
+
+    .calendar-nav {
+      display: flex;
+      gap: 8px;
+    }
+
+    .calendar-nav-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: #f8f9fa;
+      border-radius: 8px;
+      color: #666;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 20px;
+    }
+
+    .calendar-day-header {
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+    }
+
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .calendar-day.today {
+      background: #FF8A00;
+      color: white;
+      font-weight: 600;
+    }
+
+    .calendar-day.has-tasks::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 4px;
+      background: #3CC56B;
+      border-radius: 50%;
+    }
+
+    .calendar-day.selected {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    /* Pomodoro Screen */
+    .pomodoro-container {
+      padding: 40px 20px;
+      text-align: center;
+      padding-bottom: 100px;
+    }
+
+    .pomodoro-timer {
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 40px;
+      position: relative;
+    }
+
+    .timer-circle {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .timer-progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(#FF8A00 0deg, #f8f9fa 0deg);
+      transition: background 0.1s ease;
+    }
+
+    .timer-content {
+      position: relative;
+      z-index: 2;
+      background: white;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timer-time {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1A1A1A;
+      margin-bottom: 4px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .timer-label {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .pomodoro-controls {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .control-btn.primary {
+      background: #FF8A00;
+      color: white;
+    }
+
+    .control-btn.secondary {
+      background: #f8f9fa;
+      color: #666;
+    }
+
+    .pomodoro-length {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #444;
+    }
+
+    .pomodoro-length select {
+      margin-top: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 2px solid #f0f0f0;
+      font-size: 14px;
+    }
+
+    .pomodoro-stats {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .stats-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin-bottom: 12px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #FF8A00;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* AI Assistant Screen */
+    .ai-container {
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    .ai-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .ai-owl {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+    }
+
+    .ai-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1A1A1A;
+      margin-bottom: 8px;
+    }
+
+    .ai-subtitle {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .chat-container {
+      background: #f8f9fa;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      min-height: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .chat-message {
+      margin-bottom: 16px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .chat-message.user {
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .message-content {
+      background: white;
+      padding: 12px 16px;
+      border-radius: 16px;
+      max-width: 70%;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .chat-message.user .message-content {
+      background: #FF8A00;
+      color: white;
+    }
+
+    .chat-input-container {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #f0f0f0;
+      border-radius: 20px;
+      font-size: 14px;
+      resize: none;
+      min-height: 20px;
+      max-height: 100px;
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      background: #FF8A00;
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Statistics Screen */
+    .stats-container {
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+
+    .stats-header {
+      margin-bottom: 30px;
+    }
+
+    .stats-main-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1A1A1A;
+      margin-bottom: 8px;
+    }
+
+    .stats-period {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .stats-card {
+      background: white;
+      border: 1px solid #f0f0f0;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin-bottom: 16px;
+    }
+
+    .progress-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .progress-label {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .progress-bar-small {
+      flex: 1;
+      height: 6px;
+      background: #f0f0f0;
+      border-radius: 3px;
+      margin: 0 12px;
+      overflow: hidden;
+    }
+
+    .progress-fill-small {
+      height: 100%;
+      background: #FF8A00;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1A1A1A;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .empty-text {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    /* Action Buttons Container */
+    .action-buttons {
+      padding: 20px;
+      padding-bottom: 100px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* AI Assistant Button */
+    .ai-assistant-btn {
+      background: #3CC56B;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 16px rgba(60, 197, 107, 0.3);
+    }
+
+    .ai-assistant-btn:hover {
+      background: #2ea358;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(60, 197, 107, 0.4);
+    }
+
+    .error {
+      background: #dc3545;
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .success {
+      background: #28a745;
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <!-- MAIN SCREEN (Задачи) -->
+    <div class="screen active" id="mainScreen">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-content">
+          <div class="welcome-text">
+            <h1 class="welcome-title" id="welcomeTitle">FocusUp 👋</h1>
+            <p class="welcome-subtitle" id="welcomeSubtitle">Загрузка пользователя...</p>
+          </div>
+          <svg class="owl-icon" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="45" r="35" fill="#FF8A00" />
+            <circle cx="42" cy="38" r="8" fill="white" />
+            <circle cx="58" cy="38" r="8" fill="white" />
+            <circle cx="42" cy="38" r="4" fill="#1A1A1A" />
+            <circle cx="58" cy="38" r="4" fill="#1A1A1A" />
+            <rect x="38" y="32" width="24" height="3" rx="1.5" fill="#1A1A1A" />
+            <path d="M45 48 L50 52 L55 48" stroke="#1A1A1A" stroke-width="2" fill="none" />
+            <path d="M30 25 L35 30 M70 25 L65 30" stroke="#FF8A00" stroke-width="3" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Tabs: Сегодня / Все задачи / Важно -->
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTaskTab('today', this)">Сегодня</button>
+        <button class="nav-tab" onclick="switchTaskTab('all', this)">Все задачи</button>
+        <button class="nav-tab" onclick="switchTaskTab('important', this)">Важно</button>
+      </div>
+
+      <!-- Task List -->
+      <div class="task-list" id="taskList">
+        <div class="empty-state" id="emptyState">
+          <svg class="empty-icon" viewBox="0 0 100 100" fill="currentColor">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M35 50 L45 60 L65 40" stroke="currentColor" stroke-width="3" fill="none" />
+          </svg>
+          <div class="empty-title">Пока нет задач</div>
+          <div class="empty-text">Нажмите кнопку ниже чтобы добавить первую задачу</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <!-- Add Task Button -->
+        <button class="add-task-btn" onclick="openAddTaskModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+          </svg>
+          Добавить новую задачу
+        </button>
+
+        <!-- AI Assistant Button -->
+        <button class="ai-assistant-btn" onclick="showScreen('aiScreen')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V19C3 20.1 3.9 21 5 21H11V19H5V3H13V9H21Z" />
+          </svg>
+          Чат с AI-помощником
+        </button>
+      </div>
+    </div>
+
+    <!-- CALENDAR SCREEN -->
+    <div class="screen" id="calendarScreen">
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <h2 class="calendar-title" id="calendarTitle">Месяц</h2>
+          <div class="calendar-nav">
+            <button class="calendar-nav-btn" onclick="changeMonth(-1)">‹</button>
+            <button class="calendar-nav-btn" onclick="changeMonth(1)">›</button>
+          </div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+          <div class="calendar-day-header">Пн</div>
+          <div class="calendar-day-header">Вт</div>
+          <div class="calendar-day-header">Ср</div>
+          <div class="calendar-day-header">Чт</div>
+          <div class="calendar-day-header">Пт</div>
+          <div class="calendar-day-header">Сб</div>
+          <div class="calendar-day-header">Вс</div>
+        </div>
+        <div class="task-list" id="calendarTaskList">
+          <h3 style="margin-bottom:16px;color:#1A1A1A;">Задачи на выбранный день</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- POMODORO SCREEN -->
+    <div class="screen" id="pomodoroScreen">
+      <div class="pomodoro-container">
+        <div class="pomodoro-timer">
+          <div class="timer-circle">
+            <div class="timer-progress" id="timerProgress"></div>
+            <div class="timer-content">
+              <div class="timer-time" id="timerTime">25:00</div>
+              <div class="timer-label" id="timerLabel">Фокус</div>
+            </div>
+          </div>
+        </div>
+        <div class="pomodoro-controls">
+          <button class="control-btn primary" onclick="startTimer()">Старт</button>
+          <button class="control-btn secondary" onclick="pauseTimer()">Пауза</button>
+          <button class="control-btn secondary" onclick="resetTimer()">Сброс</button>
+        </div>
+        <div class="pomodoro-length">
+          <div>Длительность (мин):</div>
+          <select id="pomodoroLength" onchange="updateTimerLength()">
+            <option value="25" selected>25 минут</option>
+            <option value="15">15 минут</option>
+            <option value="45">45 минут</option>
+          </select>
+        </div>
+        <div class="pomodoro-stats">
+          <div class="stats-title">Статистика сегодня</div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value" id="completedPomodoros">0</div>
+              <div class="stat-label">Помидоров</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="focusTime">0</div>
+              <div class="stat-label">Минут фокуса</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATISTICS SCREEN -->
+    <div class="screen" id="statsScreen">
+      <div class="stats-container">
+        <div class="stats-header">
+          <h2 class="stats-main-title">Статистика</h2>
+          <p class="stats-period">За всё время</p>
+        </div>
+
+        <div class="stats-card">
+          <div class="card-title">Выполнение задач</div>
+          <div class="progress-item">
+            <span class="progress-label">Завершено</span>
+            <div class="progress-bar-small">
+              <div class="progress-fill-small" id="statsCompletedBar" style="width: 0%"></div>
+            </div>
+            <span class="progress-value" id="statsCompletedText">0/0</span>
+          </div>
+          <div class="progress-item">
+            <span class="progress-label">В процессе</span>
+            <div class="progress-bar-small">
+              <div class="progress-fill-small" id="statsInProgressBar" style="width: 0%"></div>
+            </div>
+            <span class="progress-value" id="statsInProgressText">0/0</span>
+          </div>
+        </div>
+
+        <div class="stats-card">
+          <div class="card-title">Время в фокусе</div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value" id="statsTotalSessions">0</div>
+              <div class="stat-label">Pomodoro сессий</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="statsTotalHours">0ч</div>
+              <div class="stat-label">Часов работы</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-card">
+          <div class="card-title">Эффективность</div>
+          <div class="stat-item" style="text-align:center;">
+            <div class="stat-value" id="statsCompletionRate">0%</div>
+            <div class="stat-label">Процент завершённых задач</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI ASSISTANT SCREEN -->
+    <div class="screen" id="aiScreen">
+      <div class="ai-container">
+        <div class="ai-header">
+          <svg class="ai-owl" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="45" r="35" fill="#3CC56B" />
+            <circle cx="42" cy="38" r="8" fill="white" />
+            <circle cx="58" cy="38" r="8" fill="white" />
+            <circle cx="42" cy="38" r="4" fill="#1A1A1A" />
+            <circle cx="58" cy="38" r="4" fill="#1A1A1A" />
+            <rect x="38" y="32" width="24" height="3" rx="1.5" fill="#1A1A1A" />
+            <path d="M45 48 L50 52 L55 48" stroke="#1A1A1A" stroke-width="2" fill="none" />
+            <path d="M30 25 L35 30 M70 25 L65 30" stroke="#3CC56B" stroke-width="3" />
+          </svg>
+          <h2 class="ai-title">AI-Помощник</h2>
+          <p class="ai-subtitle">Поможет с задачами и продуктивностью</p>
+        </div>
+        <div class="chat-container" id="chatContainer">
+          <div class="chat-message">
+            <svg class="message-avatar" viewBox="0 0 32 32" fill="#3CC56B">
+              <circle cx="16" cy="16" r="16" />
+            </svg>
+            <div class="message-content">
+              Привет! Я твой AI-помощник. Пока что логика ответов подключается через бота, используй /ai. Здесь —
+              текстовый лог.
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-container">
+          <textarea class="chat-input" id="chatInput" placeholder="Напишите сообщение..." rows="1"></textarea>
+          <button class="send-btn" onclick="sendAIMessage()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal" id="addTaskModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Новая задача</h3>
+          <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <form id="taskForm" onsubmit="saveTask(event)">
+          <div class="form-group">
+            <label class="form-label">Название задачи</label>
+            <div class="input-with-voice">
+              <input type="text" class="form-input voice-input" id="taskTitle" placeholder="Напишите задачу..."
+                required>
+              <button type="button" class="voice-btn" id="voiceBtn" onclick="toggleVoiceInput()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Дата</label>
+              <input type="date" class="form-input" id="taskDate">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Время</label>
+              <input type="time" class="form-input" id="taskTime">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Категория</label>
+            <div class="category-grid">
+              <button type="button" class="category-btn" data-category="work">Работа</button>
+              <button type="button" class="category-btn" data-category="personal">Личное</button>
+              <button type="button" class="category-btn" data-category="study">Учеба</button>
+              <button type="button" class="category-btn" data-category="health">Здоровье</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Приоритет</label>
+            <div class="priority-grid">
+              <button type="button" class="priority-btn" data-priority="low">Низкий</button>
+              <button type="button" class="priority-btn" data-priority="medium">Средний</button>
+              <button type="button" class="priority-btn" data-priority="high">Высокий</button>
+            </div>
+          </div>
+          <button type="submit" class="save-btn" id="saveBtn">Сохранить задачу</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+      <button class="nav-item active" onclick="showScreen('mainScreen')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z" />
+        </svg>
+        <span class="nav-label">Главная</span>
+      </button>
+      <button class="nav-item" onclick="showScreen('calendarScreen')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M19,3H18V1H16V3H8V1H6V3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M19,19H5V8H19V19Z" />
+        </svg>
+        <span class="nav-label">Календарь</span>
+      </button>
+      <button class="nav-item" onclick="showScreen('pomodoroScreen')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12,20A7,7 0 0,1 5,13A7,7 0 0,1 12,6A7,7 0 0,1 19,13A7,7 0 0,1 12,20M19.03,7.39L20.45,5.97C20,5.46 19.55,5 19.04,4.56L17.62,6C16.07,4.74 14.12,4 12,4A9,9 0 0,0 3,13A9,9 0 0,0 12,22C17,22 21,17.97 21,13C21,10.88 20.26,8.93 19.03,7.39M11,14H13V8H11M15,1H9V3H15V1Z" />
+        </svg>
+        <span class="nav-label">Помидор</span>
+      </button>
+      <button class="nav-item" onclick="showScreen('statsScreen')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22,21H2V3H4V19H6V17H10V19H12V16H16V19H18V17H22V21Z" />
+        </svg>
+        <span class="nav-label">Статистика</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ==== TELEGRAM + API CONFIG (из FocusUp) ====
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const API_URL = window.location.origin + '/api';
+
+    let currentUser = null;
+    let tasks = [];
+    let rawTasks = [];
+    let currentTab = 'today';
+
+    let currentDate = new Date();
+    let selectedDate = new Date();
+
+    // Pomodoro
+    let timerInterval = null;
+    let timerSeconds = 25 * 60;
+    let isTimerRunning = false;
+
+    // ==== INIT APP ====
+    async function initApp() {
+      try {
+        const initData = tg.initData;
+
+        if (!initData) {
+          showError('Ошибка: запустите приложение через Telegram');
+          return;
+        }
+
+        const response = await fetch(`${API_URL}/auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+          showError('Ошибка аутентификации');
+          return;
+        }
+
+        currentUser = data.user;
+
+        // Обновим хедер
+        const welcomeTitle = document.getElementById('welcomeTitle');
+        const welcomeSubtitle = document.getElementById('welcomeSubtitle');
+        if (welcomeTitle) welcomeTitle.textContent = 'Привет, ' + (currentUser.first_name || 'друг') + ' 👋';
+        if (welcomeSubtitle) {
+          welcomeSubtitle.textContent = currentUser.username
+            ? `@${currentUser.username} • Управляем задачами`
+            : 'Управляем твоими задачами';
+        }
+
+        setupEventListeners();
+
+        // Загрузить данные
+        await loadTasks();
+        await loadStats();
+        renderCalendar();
+        updateProgress();
+
+        // Дата по умолчанию в модалке
+        const today = new Date();
+        const dateInput = document.getElementById('taskDate');
+        if (dateInput) dateInput.value = today.toISOString().split('T')[0];
+
+      } catch (e) {
+        console.error('Init error', e);
+        showError('Ошибка подключения к серверу');
+      }
+    }
+
+    function formatDateLocal(date) {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // ==== LOAD TASKS (из твоего API) ====
+    function parseDeadline(deadlineStr) {
+      if (!deadlineStr) {
+        return { date: null, time: "" };
+      }
+
+      let d = new Date(deadlineStr);
+      if (isNaN(d.getTime())) {
+        const m = deadlineStr.match(
+          /^(\d{2})\.(\d{2})\.(\d{2,4})(?:\s+(\d{2}):(\d{2}))?$/
+        );
+        if (m) {
+          const day = parseInt(m[1], 10);
+          const month = parseInt(m[2], 10) - 1;
+          let year = parseInt(m[3], 10);
+          if (m[3].length === 2) {
+            year = 2000 + year;
+          }
+          const hour = m[4] ? parseInt(m[4], 10) : 0;
+          const minute = m[5] ? parseInt(m[5], 10) : 0;
+          d = new Date(year, month, day, hour, minute);
+        } else {
+          return { date: null, time: "" };
+        }
+      }
+
+      // ⚡ ЛОКАЛЬНЫЙ формат, без UTC
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
+
+      return {
+        date: `${yyyy}-${mm}-${dd}`, // то, что дальше сравнивается в календаре
+        time: `${hh}:${mi}`,
+      };
+    }
+
+    async function loadTasks() {
+      try {
+        const response = await fetch(`${API_URL}/tasks?user_id=${currentUser.id}`);
+        const data = await response.json();
+
+        if (data.success) {
+          rawTasks = data.tasks || [];
+
+          // Маппим в формат UI
+          tasks = rawTasks.map(t => {
+            const deadline = t.deadline || null;
+            const parsed = parseDeadline(deadline);
+
+            return {
+              __backendId: String(t.id),
+              title: t.title || t.task || '',
+              category: t.category || "personal",
+              priority: t.priority || "medium",
+              dueDate: parsed.date,
+              dueTime: parsed.time,
+              completed: !!t.completed,
+              raw: t
+            };
+          });
+
+          renderTasks();
+          updateProgress();
+          renderCalendar();
+        }
+      } catch (e) {
+        console.error("Load tasks error", e);
+        showError("Ошибка загрузки задач");
+      }
+    }
+
+    // ==== RENDER TASKS (дизайн "Совы", логика FocusUp) ====
+    function renderTasks() {
+      const taskList = document.getElementById('taskList');
+      const emptyState = document.getElementById('emptyState');
+
+      if (!taskList) return;
+
+      let filtered = [...tasks];
+      const todayStr = formatDateLocal(new Date());
+
+      if (currentTab === 'today') {
+        filtered = filtered.filter(t => t.dueDate === todayStr);
+      } else if (currentTab === 'important') {
+        filtered = filtered.filter(t => t.priority === 'high');
+      }
+
+      // Удаляем только элементы задач, не трогая emptyState
+      taskList.querySelectorAll('.task-item').forEach(el => el.remove());
+
+      if (filtered.length === 0) {
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+      }
+
+      if (emptyState) emptyState.style.display = 'none';
+
+      filtered.forEach(task => {
+        const item = document.createElement('div');
+        item.className = 'task-item' + (task.completed ? ' completed' : '');
+        item.onclick = () => toggleTask(task.__backendId);
+
+        const header = document.createElement('div');
+        header.className = 'task-header';
+
+        // чекбокс
+        const checkbox = document.createElement('div');
+        checkbox.className = 'task-checkbox' + (task.completed ? ' checked' : '');
+        checkbox.textContent = task.completed ? '✓' : '';
+        checkbox.onclick = (e) => {
+          e.stopPropagation();
+          toggleTask(task.__backendId);
+        };
+
+        // контент
+        const content = document.createElement('div');
+        content.className = 'task-content';
+
+        const title = document.createElement('div');
+        title.className = 'task-title' + (task.completed ? ' completed' : '');
+        title.textContent = task.title;
+
+        const meta = document.createElement('div');
+        meta.className = 'task-meta';
+
+        const cat = document.createElement('span');
+        cat.className = 'task-category';
+        cat.textContent = getCategoryName(task.category);
+
+        const pr = document.createElement('span');
+        pr.className = 'task-priority ' + (task.priority || 'medium');
+        pr.textContent = getPriorityText(task.priority || 'medium');
+
+        meta.appendChild(cat);
+        meta.appendChild(pr);
+
+        if (task.dueDate) {
+          const dt = document.createElement('span');
+          dt.className = 'task-time';
+          dt.textContent = task.dueTime
+            ? `${task.dueDate} ${task.dueTime}`
+            : task.dueDate;
+          meta.appendChild(dt);
+        }
+
+        content.appendChild(title);
+        content.appendChild(meta);
+
+        // кнопка удаления
+        const del = document.createElement('div');
+        del.className = 'task-delete';
+        del.textContent = '🗑️';
+        del.onclick = (e) => {
+          e.stopPropagation();
+          deleteTask(task.__backendId);
+        };
+
+        header.appendChild(checkbox);
+        header.appendChild(content);
+        header.appendChild(del);
+
+        item.appendChild(header);
+        taskList.appendChild(item);
+      });
+    }
+
+    // ==== SWITCH TASK TAB ====
+    function switchTaskTab(tab, el) {
+      currentTab = tab;
+      document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+      if (el) el.classList.add('active');
+      renderTasks();
+    }
+
+    // ==== COMPLETE / TOGGLE TASK ====
+    async function toggleTask(taskId) {
+      const t = tasks.find(x => x.__backendId === String(taskId));
+      if (!t) return;
+
+      // вычисляем новый статус
+      const isCompletedNow = !t.completed;
+      const newStatus = isCompletedNow ? 'completed' : 'in_progress';
+
+      try {
+        const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        const data = await response.json();
+        if (data.success) {
+          showSuccess(isCompletedNow ? 'Задача выполнена! 🎉' : 'Задача снова в работе');
+          await loadTasks();
+          await loadStats();
+        } else {
+          showError('Ошибка обновления задачи');
+        }
+      } catch (e) {
+        console.error('Complete task error', e);
+        showError('Ошибка обновления задачи');
+      }
+    }
+
+    // ==== DELETE TASK ====
+    async function deleteTask(taskId) {
+      if (!confirm('Удалить эту задачу?')) return;
+
+      try {
+        const res = await fetch(`${API_URL}/tasks/${taskId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          showSuccess('Задача удалена');
+          await loadTasks();
+          await loadStats();
+        } else {
+          showError('Ошибка удаления задачи');
+        }
+      } catch (e) {
+        console.error('Delete task error', e);
+        showError('Ошибка удаления задачи');
+      }
+    }
+
+    // ==== PROGRESS BAR ====
+    function updateProgress() {
+      const completed = tasks.filter(t => t.completed).length;
+      const total = tasks.length;
+      const progress = total > 0 ? (completed / total) * 100 : 0;
+      const bar = document.getElementById('progressFill');
+      if (bar) bar.style.width = `${progress}%`;
+    }
+
+    // ==== MODAL ADD TASK ====
+    function openAddTaskModal() {
+      document.getElementById('addTaskModal').classList.add('show');
+      document.getElementById('taskTitle').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('addTaskModal').classList.remove('show');
+      document.getElementById('taskForm').reset();
+      document.querySelectorAll('.category-btn, .priority-btn').forEach(b => b.classList.remove('selected'));
+      selectedCategory = '';
+      selectedPriority = '';
+    }
+
+    let selectedCategory = '';
+    let selectedPriority = '';
+
+    async function saveTask(event) {
+      event.preventDefault();
+
+      const title = document.getElementById('taskTitle').value.trim();
+      const dueDate = document.getElementById('taskDate').value;
+      const dueTime = document.getElementById('taskTime').value;
+
+      if (!title) {
+        showError('Введите текст задачи');
+        return;
+      }
+
+      // собираем deadline как ISO (если есть дата)
+      let deadline = null;
+      if (dueDate) {
+        if (dueTime) {
+          deadline = `${dueDate}T${dueTime}:00`;
+        } else {
+          deadline = `${dueDate}T00:00:00`;
+        }
+      }
+
+      const body = {
+        user_id: currentUser.id,
+        task: title,
+        category: selectedCategory || "personal",
+        priority: selectedPriority || "medium",
+        deadline: deadline,
+      };
+
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Сохранение...';
+
+      try {
+        const response = await fetch(`${API_URL}/tasks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await response.json();
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Сохранить задачу';
+
+        if (data.success) {
+          showSuccess('Задача добавлена!');
+          closeModal();
+          await loadTasks();
+          await loadStats();
+        } else {
+          showError('Ошибка добавления задачи');
+        }
+      } catch (e) {
+        console.error('Add task error', e);
+        showError('Ошибка добавления задачи');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Сохранить задачу';
+      }
+    }
+
+    // ==== SCREEN NAVIGATION (нижнее меню) ====
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const navMap = {
+        mainScreen: 0,
+        calendarScreen: 1,
+        pomodoroScreen: 2,
+        statsScreen: 3
+      };
+      const index = navMap[screenId];
+      if (index !== undefined) {
+        document.querySelectorAll('.nav-item')[index].classList.add('active');
+      }
+
+      if (screenId === 'calendarScreen') {
+        renderCalendar();
+      } else if (screenId === 'statsScreen') {
+        loadStats();
+      }
+    }
+
+    // ==== CALENDAR (дизайн "совы", логика по deadline) ====
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      const title = document.getElementById('calendarTitle');
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      const monthNames = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+      ];
+      title.textContent = `${monthNames[month]} ${year}`;
+
+      // Заголовки сохраняем
+      const headersHtml = `
+      <div class="calendar-day-header">Пн</div>
+      <div class="calendar-day-header">Вт</div>
+      <div class="calendar-day-header">Ср</div>
+      <div class="calendar-day-header">Чт</div>
+      <div class="calendar-day-header">Пт</div>
+      <div class="calendar-day-header">Сб</div>
+      <div class="calendar-day-header">Вс</div>
+    `;
+      grid.innerHTML = headersHtml;
+
+      const firstDay = new Date(year, month, 1);
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - ((firstDay.getDay() + 6) % 7));
+
+      const today = new Date();
+
+      for (let i = 0; i < 42; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+
+        const dayEl = document.createElement('div');
+        dayEl.className = 'calendar-day';
+        dayEl.textContent = date.getDate();
+
+        if (date.getMonth() !== month) {
+          dayEl.style.opacity = '0.3';
+        }
+
+        if (date.toDateString() === today.toDateString()) {
+          dayEl.classList.add('today');
+        }
+
+        if (date.toDateString() === selectedDate.toDateString()) {
+          dayEl.classList.add('selected');
+        }
+
+        const dateStr = formatDateLocal(date);
+        const hasTasks = tasks.some(t => t.dueDate === dateStr);
+        if (hasTasks) dayEl.classList.add('has-tasks');
+
+        dayEl.onclick = () => selectDate(date);
+        grid.appendChild(dayEl);
+      }
+
+      renderCalendarTasks();
+    }
+
+    function renderCalendarTasks() {
+      const list = document.getElementById('calendarTaskList');
+      const dateStr = formatDateLocal(selectedDate);
+      const dayTasks = tasks.filter(t => t.dueDate === dateStr);
+
+      list.innerHTML = `<h3 style="margin-bottom:16px;color:#1A1A1A;">Задачи на выбранный день</h3>`;
+
+      if (dayTasks.length === 0) {
+        list.innerHTML += `
+    <div class="empty-state">
+      <div class="empty-title">Нет задач</div>
+      <div class="empty-text">На этот день задач не запланировано</div>
+    </div>`;
+        return;
+      }
+
+      dayTasks.forEach(task => {
+        const item = document.createElement('div');
+        item.className = 'task-item' + (task.completed ? ' completed' : '');
+        item.onclick = () => toggleTask(task.__backendId);
+
+        const header = document.createElement('div');
+        header.className = 'task-header';
+
+        const checkbox = document.createElement('div');
+        checkbox.className = 'task-checkbox' + (task.completed ? ' checked' : '');
+        checkbox.textContent = task.completed ? '✓' : '';
+        checkbox.onclick = (e) => {
+          e.stopPropagation();
+          toggleTask(task.__backendId);
+        };
+
+        const content = document.createElement('div');
+        content.className = 'task-content';
+
+        const title = document.createElement('div');
+        title.className = 'task-title' + (task.completed ? ' completed' : '');
+        title.textContent = task.title;
+
+        const meta = document.createElement('div');
+        meta.className = 'task-meta';
+
+        const cat = document.createElement('span');
+        cat.className = 'task-category';
+        cat.textContent = getCategoryName(task.category);
+
+        const pr = document.createElement('span');
+        pr.className = 'task-priority ' + (task.priority || 'medium');
+        pr.textContent = getPriorityText(task.priority || 'medium');
+
+        meta.appendChild(cat);
+        meta.appendChild(pr);
+
+        if (task.dueTime) {
+          const timeEl = document.createElement('span');
+          timeEl.className = 'task-time';
+          timeEl.textContent = task.dueTime;
+          meta.appendChild(timeEl);
+        }
+
+        content.appendChild(title);
+        content.appendChild(meta);
+
+        const del = document.createElement('div');
+        del.className = 'task-delete';
+        del.textContent = '🗑️';
+        del.onclick = (e) => {
+          e.stopPropagation();
+          deleteTask(task.__backendId);
+        };
+
+        header.appendChild(checkbox);
+        header.appendChild(content);
+        header.appendChild(del);
+
+        item.appendChild(header);
+        list.appendChild(item);
+      });
+    }
+
+    function selectDate(date) {
+      selectedDate = new Date(date);
+      renderCalendar();
+    }
+
+    function changeMonth(dir) {
+      currentDate.setMonth(currentDate.getMonth() + dir);
+      renderCalendar();
+    }
+
+    // ==== POMODORO (логика FocusUp + круг "совы") ====
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timerSeconds / 60);
+      const seconds = timerSeconds % 60;
+      const value = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      document.getElementById('timerTime').textContent = value;
+
+      const baseLength = parseInt(document.getElementById('pomodoroLength').value) * 60;
+      const total = baseLength || 25 * 60;
+      const passed = total - timerSeconds;
+      const progressDeg = Math.max(0, Math.min(360, (passed / total) * 360));
+      document.getElementById('timerProgress').style.background =
+        `conic-gradient(#FF8A00 ${progressDeg}deg, #f8f9fa ${progressDeg}deg)`;
+    }
+
+    function startTimer() {
+      if (isTimerRunning) return;
+      isTimerRunning = true;
+
+      timerInterval = setInterval(() => {
+        if (timerSeconds > 0) {
+          timerSeconds--;
+          updateTimerDisplay();
+        } else {
+          finishPomodoro();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      isTimerRunning = false;
+      clearInterval(timerInterval);
+    }
+
+    function resetTimer() {
+      pauseTimer();
+      const length = parseInt(document.getElementById('pomodoroLength').value);
+      timerSeconds = length * 60;
+      document.getElementById('timerLabel').textContent = 'Фокус';
+      updateTimerDisplay();
+    }
+
+    function updateTimerLength() {
+      resetTimer();
+    }
+
+    async function finishPomodoro() {
+      pauseTimer();
+      const length = parseInt(document.getElementById('pomodoroLength').value);
+
+      try {
+        const res = await fetch(`${API_URL}/pomodoro`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: currentUser.id,
+            duration: length * 60, // отправляем в СЕКУНДАХ
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showSuccess('Pomodoro сессия завершена! 🎉');
+          // обновим счётчики
+          const completedEl = document.getElementById('completedPomodoros');
+          const focusTimeEl = document.getElementById('focusTime');
+          const completed = parseInt(completedEl.textContent) + 1;
+          const focusTime = parseInt(focusTimeEl.textContent) + length;
+          completedEl.textContent = completed;
+          focusTimeEl.textContent = focusTime;
+          await loadStats();
+        }
+      } catch (e) {
+        console.error('Save pomodoro error', e);
+      }
+
+      resetTimer();
+    }
+
+    // ==== STATS (используем твой /stats, но отображаем в "сове") ====
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_URL}/stats?user_id=${currentUser.id}`);
+        const data = await res.json();
+        if (data.success) {
+          renderStats(data);
+        }
+      } catch (e) {
+        console.error("Load stats error", e);
+      }
+    }
+
+    function renderStats(data) {
+      const stats = data.tasks_stats || {};
+      const pomodoro = data.pomodoro_stats || {};
+
+      const total = stats.total_tasks || 0;
+      const completed = stats.completed_tasks || 0;
+      const inProgress = stats.active_tasks || 0;
+      const rate = stats.completion_rate || 0;
+
+      const completedBar = document.getElementById("statsCompletedBar");
+      const inProgressBar = document.getElementById("statsInProgressBar");
+      const completedText = document.getElementById("statsCompletedText");
+      const inProgressText = document.getElementById("statsInProgressText");
+
+      if (completedBar)
+        completedBar.style.width = total ? `${(completed / total) * 100}%` : "0%";
+      if (inProgressBar)
+        inProgressBar.style.width = total
+          ? `${(inProgress / total) * 100}%`
+          : "0%";
+      if (completedText) completedText.textContent = `${completed}/${total}`;
+      if (inProgressText) inProgressText.textContent = `${inProgress}/${total}`;
+
+      const totalSessions = pomodoro.total_sessions || 0;
+      const totalMinutes = pomodoro.total_duration_minutes || 0;
+
+      const statsTotalSessions = document.getElementById("statsTotalSessions");
+      const statsTotalHours = document.getElementById("statsTotalHours");
+      const statsCompletionRate = document.getElementById("statsCompletionRate");
+
+      if (statsTotalSessions) statsTotalSessions.textContent = totalSessions;
+      if (statsTotalHours)
+        statsTotalHours.textContent = `${Math.round(totalMinutes / 60)}ч`;
+      if (statsCompletionRate) statsCompletionRate.textContent = `${rate}%`;
+
+      // мини-счётчики в Pomodoro
+      const pomodoroCountEl = document.getElementById("completedPomodoros");
+      const focusTimeEl = document.getElementById("focusTime");
+      if (pomodoroCountEl) pomodoroCountEl.textContent = totalSessions;
+      if (focusTimeEl) focusTimeEl.textContent = totalMinutes;
+    }
+
+    // ==== AI CHAT (как у FocusUp: плейсхолдер) ====
+    async function sendAIMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      // показываем сообщение пользователя
+      addChatMessage(text, true);
+
+      input.value = '';
+      input.style.height = 'auto';
+
+      try {
+        const res = await fetch(`${API_URL}/ai`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: currentUser.id,
+            message: text
+          })
+        });
+
+        const data = await res.json();
+        if (data.success && data.reply) {
+          addChatMessage(data.reply, false);
+        } else {
+          addChatMessage(
+            'Не удалось получить ответ от AI: ' + (data.error || 'ошибка'),
+            false
+          );
+        }
+      } catch (e) {
+        console.error('AI error', e);
+        addChatMessage('Ошибка подключения к AI. Попробуйте позже.', false);
+      }
+    }
+
+    function addChatMessage(message, isUser) {
+      const container = document.getElementById('chatContainer');
+
+      const msg = document.createElement('div');
+      msg.className = 'chat-message' + (isUser ? ' user' : '');
+
+      const avatar = document.createElement('svg');
+      avatar.className = 'message-avatar';
+      avatar.setAttribute('viewBox', '0 0 32 32');
+      avatar.setAttribute('fill', isUser ? '#FF8A00' : '#3CC56B');
+      avatar.innerHTML = '<circle cx="16" cy="16" r="16" />';
+
+      const content = document.createElement('div');
+      content.className = 'message-content';
+      content.textContent = message;
+
+      msg.appendChild(avatar);
+      msg.appendChild(content);
+
+      container.appendChild(msg);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ==== CATEGORY & PRIORITY HELPERS ====
+    function getCategoryName(category) {
+      const names = {
+        work: 'Работа',
+        personal: 'Личное',
+        study: 'Учеба',
+        health: 'Здоровье'
+      };
+      return names[category] || 'Личное';
+    }
+
+    function getPriorityText(priority) {
+      const priorities = {
+        high: '🔴 Высокий',
+        medium: '🟡 Средний',
+        low: '🟢 Низкий'
+      };
+      return priorities[priority] || priority;
+    }
+
+    // ==== VOICE RECOGNITION (через MediaRecorder + /voice) ====
+    let isRecording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let currentStream = null;
+
+    async function toggleVoiceInput() {
+      if (isRecording) {
+        stopRecording();
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Ваш браузер не поддерживает запись аудио');
+        return;
+      }
+
+      try {
+        const btn = document.getElementById('voiceBtn');
+        btn.classList.add('recording');
+
+        // Запрашиваем доступ к микрофону
+        currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // Лучше webm/ogg, Telegram WebView это обычно умеет
+        mediaRecorder = new MediaRecorder(currentStream, { mimeType: 'audio/webm' });
+        audioChunks = [];
+        isRecording = true;
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          try {
+            if (!audioChunks.length) {
+              stopRecordingVisual();
+              return;
+            }
+
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', blob, 'voice.webm');
+
+            const res = await fetch(`${API_URL}/voice`, {
+              method: 'POST',
+              body: formData
+            });
+
+            const data = await res.json();
+
+            if (data.success && data.text) {
+              const titleInput = document.getElementById('taskTitle');
+              const dateInput = document.getElementById('taskDate');
+              const timeInput = document.getElementById('taskTime');
+
+              const parsed = data.parsed || {};
+
+              // TITLE
+              titleInput.value = parsed.title || data.text;
+
+              // DATE (формат YYYY-MM-DD для <input type="date">)
+              if (parsed.date) {
+                dateInput.value = parsed.date;
+              }
+
+              // TIME (формат HH:MM для <input type="time">)
+              if (parsed.time) {
+                timeInput.value = parsed.time;
+              }
+
+              // CATEGORY → кликаем нужную кнопку
+              if (parsed.category) {
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                  const isMatch = btn.dataset.category === parsed.category;
+                  btn.classList.toggle('selected', isMatch);
+                  if (isMatch) {
+                    selectedCategory = parsed.category;
+                  }
+                });
+              }
+
+              // PRIORITY → кликаем нужную кнопку
+              if (parsed.priority) {
+                document.querySelectorAll('.priority-btn').forEach(btn => {
+                  const isMatch = btn.dataset.priority === parsed.priority;
+                  btn.classList.toggle('selected', isMatch);
+                  if (isMatch) {
+                    selectedPriority = parsed.priority;
+                  }
+                });
+              }
+
+            } else {
+              showError(data.error || 'Не удалось распознать голос');
+            }
+          } catch (e) {
+            console.error('Voice API error', e);
+            showError('Ошибка при отправке голосового на сервер');
+          } finally {
+            stopRecordingVisual();
+          }
+        };
+
+        mediaRecorder.start();
+      } catch (e) {
+        console.error('getUserMedia error', e);
+        showError('Не удалось получить доступ к микрофону');
+        stopRecordingVisual();
+      }
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+      isRecording = false;
+
+      try {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+      } catch (e) {
+        console.error('Error stopping recorder', e);
+      }
+    }
+
+    function stopRecordingVisual() {
+      const btn = document.getElementById('voiceBtn');
+      if (btn) btn.classList.remove('recording');
+
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+        currentStream = null;
+      }
+
+      mediaRecorder = null;
+      audioChunks = [];
+      isRecording = false;
+    }
+
+    // ==== EVENT LISTENERS ====
+    function setupEventListeners() {
+      // выбор категории
+      document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedCategory = btn.dataset.category;
+        });
+      });
+
+      // выбор приоритета
+      document.querySelectorAll('.priority-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedPriority = btn.dataset.priority;
+        });
+      });
+
+      // авто-рост textarea чата
+      const chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        chatInput.addEventListener('input', function () {
+          this.style.height = 'auto';
+          this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+
+        chatInput.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendAIMessage();
+          }
+        });
+      }
+    }
+
+    // ==== ERRORS / SUCCESS ====
+    function showError(message) {
+      const container = document.querySelector('.app-container');
+      const div = document.createElement('div');
+      div.className = 'error';
+      div.textContent = message;
+      container.insertBefore(div, container.firstChild);
+      setTimeout(() => div.remove(), 3000);
+    }
+
+    function showSuccess(message) {
+      const container = document.querySelector('.app-container');
+      const div = document.createElement('div');
+      div.className = 'success';
+      div.textContent = message;
+      container.insertBefore(div, container.firstChild);
+      setTimeout(() => div.remove(), 3000);
+    }
+
+    // ==== START ====
+    document.addEventListener('DOMContentLoaded', () => {
+      const length = parseInt(document.getElementById('pomodoroLength').value);
+      timerSeconds = length * 60;
+      updateTimerDisplay();
+      initApp();
+    });
+  </script>
+
+</body>
+
+</html>
