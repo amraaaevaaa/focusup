@@ -176,3 +176,4 @@ def update_task_status(task_id: int, completed: bool = True) -> bool:
         return True
     finally:
         session.close()
+# Я РЕВУ
