@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, date, timedelta
 
 from sqlalchemy import (
-    create_engine, Column, Integer, String, DateTime, Boolean, func
+    create_engine, Column, Integer, String, DateTime, Boolean, func, ForeignKey, text
 )
 from sqlalchemy.orm import sessionmaker, declarative_base
 
@@ -26,7 +26,8 @@ else:
         future=True
     )
 
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+# NOTE: removed deprecated `autocommit` arg; use `future=True` and explicit commits.
+SessionLocal = sessionmaker(bind=engine, autoflush=False, future=True, expire_on_commit=False)
 Base = declarative_base()
 
 # ===============================
@@ -44,14 +45,16 @@ class User(Base):
 class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False)
+    # связка на users.id — полезно для целостности
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(512))
     category = Column(String(128))
+    # храню строкой (как у вас было) — парсинг даты делает helper
     deadline = Column(String(64))
     tags = Column(String(256))
-    completed = Column(Boolean, server_default="false", nullable=False)
+    # Для совместимости с SQLite/PG: используем server_default как текст и python default
+    completed = Column(Boolean, nullable=False, server_default=text('0'), default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
 
 # ===============================
 # INIT
@@ -68,6 +71,8 @@ def get_session():
 # INTERNAL HELPERS
 # ===============================
 def _task_to_dict(r: Task) -> Dict[str, Any]:
+    if r is None:
+        return None
     return {
         "id": r.id,
         "user_id": r.user_id,
@@ -97,7 +102,7 @@ def _extract_date_from_deadline(deadline_str: Optional[str]) -> Optional[date]:
         try:
             dt = datetime.strptime(date_part, fmt)
             return dt.date()
-        except:
+        except Exception:
             continue
 
     return None
