@@ -1,4 +1,3 @@
-# database.py
 import os
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, DateTime, Boolean, func
@@ -19,7 +18,7 @@ else:
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 Base = declarative_base()
 
-# --- Models (адаптированы под простой прежний интерфейс) ---
+# --- Models ---
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -46,7 +45,7 @@ def init_db():
 def get_session():
     return SessionLocal()
 
-# --- Convenience functions used in code (names сохранены как в старом проекте) ---
+# --- User helpers ---
 def add_user(tg_id, username=None, first_name=None, last_name=None):
     session = get_session()
     try:
@@ -69,14 +68,14 @@ def get_user_id(tg_id):
     finally:
         session.close()
 
+# --- Task helpers ---
 def add_task(user_id, title, category="Общие", deadline=None, tags=None):
     session = get_session()
     try:
         t = Task(user_id=user_id, title=title, category=category, deadline=deadline, tags=tags)
         session.add(t)
         session.commit()
-        t_id = t.id
-        return t_id
+        return t.id
     finally:
         session.close()
 
@@ -84,6 +83,41 @@ def get_user_tasks(user_internal_id):
     session = get_session()
     try:
         rows = session.query(Task).filter_by(user_id=user_internal_id).all()
-        return [ {"id": r.id, "title": r.title, "category": r.category, "deadline": r.deadline, "tags": r.tags, "completed": r.completed} for r in rows ]
+        return [
+            {
+                "id": r.id,
+                "title": r.title,
+                "category": r.category,
+                "deadline": r.deadline,
+                "tags": r.tags,
+                "completed": r.completed
+            }
+            for r in rows
+        ]
     finally:
         session.close()
+
+# --- Stats helper (ВАЖНО!) ---
+def get_user_stats(user_internal_id):
+    """
+    Возвращает статистику по пользователю:
+    {
+        "total_tasks": int,
+        "active_tasks": int,
+        "completed_tasks": int
+    }
+    """
+    session = get_session()
+    try:
+        total = session.query(Task).filter_by(user_id=user_internal_id).count()
+        completed = session.query(Task).filter_by(user_id=user_internal_id, completed=True).count()
+        active = total - completed
+        return {
+            "total_tasks": total,
+            "active_tasks": active,
+            "completed_tasks": completed
+        }
+    finally:
+        session.close()
+
+
