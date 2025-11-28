@@ -1,64 +1,94 @@
 import os
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Text, DateTime, Boolean, func
+    create_engine, Column, Integer, String, DateTime, Boolean, func
 )
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.exc import SQLAlchemyError
 
 # Получаем DATABASE_URL из окружения; если его нет — используем sqlite файл
 DATABASE_URL = os.getenv("DATABASE_URL")
+
 if DATABASE_URL:
-    # Render может дать postgres:// — SQLAlchemy предпочитает postgresql://
+    # Render иногда даёт postgres:// — SQLAlchemy требует postgresql://
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    engine = create_engine(DATABASE_URL, future=True)
+
+    engine = create_engine(
+        DATABASE_URL,
+        future=True,
+        pool_pre_ping=True
+    )
 else:
-    engine = create_engine("sqlite:///focusup.db", connect_args={"check_same_thread": False}, future=True)
+    # локальная SQLite для разработки
+    engine = create_engine(
+        "sqlite:///focusup.db",
+        connect_args={"check_same_thread": False},
+        future=True
+    )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 Base = declarative_base()
 
-# --- Models ---
+
+# ================================
+# MODELS
+# ================================
 class User(Base):
     __tablename__ = "users"
+
     id = Column(Integer, primary_key=True, index=True)
     tg_id = Column(Integer, unique=True, index=True, nullable=False)
     username = Column(String(256))
     first_name = Column(String(256))
     last_name = Column(String(256))
 
+
 class Task(Base):
     __tablename__ = "tasks"
+
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False)  # internal user id
+    user_id = Column(Integer, nullable=False)
     title = Column(String(512))
     category = Column(String(128))
-    deadline = Column(String(64))  # keep as string for simplicity
+    deadline = Column(String(64))
     tags = Column(String(256))
-    completed = Column(Boolean, server_default="0")
+    completed = Column(Boolean, server_default="false", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+# ================================
+# DB INIT
+# ================================
 def init_db():
-    """Create tables if they don't exist."""
     Base.metadata.create_all(bind=engine)
+
 
 def get_session():
     return SessionLocal()
 
-# --- User helpers ---
+
+# ================================
+# USER HELPERS
+# ================================
 def add_user(tg_id, username=None, first_name=None, last_name=None):
     session = get_session()
     try:
         user = session.query(User).filter_by(tg_id=tg_id).first()
         if user:
             return user.id
-        new = User(tg_id=tg_id, username=username, first_name=first_name, last_name=last_name)
-        session.add(new)
+
+        new_user = User(
+            tg_id=tg_id,
+            username=username,
+            first_name=first_name,
+            last_name=last_name
+        )
+        session.add(new_user)
         session.commit()
-        session.refresh(new)
-        return new.id
+        session.refresh(new_user)
+        return new_user.id
     finally:
         session.close()
+
 
 def get_user_id(tg_id):
     session = get_session()
@@ -68,16 +98,26 @@ def get_user_id(tg_id):
     finally:
         session.close()
 
-# --- Task helpers ---
+
+# ================================
+# TASK HELPERS
+# ================================
 def add_task(user_id, title, category="Общие", deadline=None, tags=None):
     session = get_session()
     try:
-        t = Task(user_id=user_id, title=title, category=category, deadline=deadline, tags=tags)
-        session.add(t)
+        task = Task(
+            user_id=user_id,
+            title=title,
+            category=category,
+            deadline=deadline,
+            tags=tags
+        )
+        session.add(task)
         session.commit()
-        return t.id
+        return task.id
     finally:
         session.close()
+
 
 def get_user_tasks(user_internal_id):
     session = get_session()
@@ -90,34 +130,49 @@ def get_user_tasks(user_internal_id):
                 "category": r.category,
                 "deadline": r.deadline,
                 "tags": r.tags,
-                "completed": r.completed
+                "completed": r.completed,
             }
             for r in rows
         ]
     finally:
         session.close()
 
-# --- Stats helper (ВАЖНО!) ---
+
+# ================================
+# STATISTICS
+# ================================
 def get_user_stats(user_internal_id):
-    """
-    Возвращает статистику по пользователю:
-    {
-        "total_tasks": int,
-        "active_tasks": int,
-        "completed_tasks": int
-    }
-    """
     session = get_session()
     try:
         total = session.query(Task).filter_by(user_id=user_internal_id).count()
-        completed = session.query(Task).filter_by(user_id=user_internal_id, completed=True).count()
+        completed = session.query(Task).filter_by(
+            user_id=user_internal_id,
+            completed=True
+        ).count()
         active = total - completed
+
         return {
             "total_tasks": total,
             "active_tasks": active,
             "completed_tasks": completed
         }
+
     finally:
         session.close()
 
 
+# ================================
+# UPDATE STATUS
+# ================================
+def update_task_status(task_id: int, completed: bool = True) -> bool:
+    session = get_session()
+    try:
+        task = session.get(Task, task_id)
+        if not task:
+            return False
+
+        task.completed = bool(completed)
+        session.commit()
+        return True
+    finally:
+        session.close()
